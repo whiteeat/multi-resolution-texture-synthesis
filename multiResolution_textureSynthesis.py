@@ -17,7 +17,7 @@ import random
 
 import json
 
-def multiResolution_textureSynthesis(parms, userExample = None):
+def multiResolution_textureSynthesis(parms, userExample=None, snapshots=True):
     
     #check if save dir exists
     checkIfDirectoryExists(parms["saveImgsPath"])
@@ -63,22 +63,29 @@ def multiResolution_textureSynthesis(parms, userExample = None):
                     C = findBestMatchCoord(canvas, exampleMap, kD, pLvl, [r,c], parms, samples, k=min(samples, 1))
                     canvas.pyramid[pLvl][r, c] = exampleMap.pyramid[pLvl][C[0], C[1]]
                     filledMap.pyramid[pLvl][r, c] = np.ones((3,))
-            
-            print(pLvl, " > ", canvas.levels)
-            print(r, " > ", rows)
-            #SAVE IMAGE EVERY ROW
-            showLiveUpdate(canvas, exampleMap, parms["pyramidType"])
-            saveImg(canvas, parms["pyramidType"], pLvl, parms["saveImgsPath"], index)
+
+            if snapshots:
+                print(pLvl, " > ", canvas.levels)
+                print(r, " > ", rows)
+
+                #SAVE IMAGE EVERY ROW
+                showLiveUpdate(canvas, exampleMap, parms["pyramidType"])
+                saveImg(canvas, parms["pyramidType"], pLvl, parms["saveImgsPath"], index)
 
             index += 1
 
-        #copy for visualization purposes (only if gaussian)
-        if parms["pyramidType"] == "gaussian": 
-            if pLvl+1<=canvas.levels:
-                canvas.pyramid[pLvl+1] = visualizeNextLevel(canvas.pyramid[pLvl], canvas.pyramid[pLvl+1], filledMap.pyramid[pLvl+1])
+        if snapshots:
+            #copy for visualization purposes (only if gaussian)
+            if parms["pyramidType"] == "gaussian": 
+                if pLvl+1<=canvas.levels:
+                    canvas.pyramid[pLvl+1] = visualizeNextLevel(canvas.pyramid[pLvl], canvas.pyramid[pLvl+1], filledMap.pyramid[pLvl+1])
+    
+    if not snapshots:
+        saveImg(canvas, parms["pyramidType"], pLvl, parms["saveImgsPath"], index)
 
     
 def visualizeNextLevel(prevLevel, nextLevel, filledMapNextLevel):
+    assert not filledMapNextLevel.any(), "The filledMapNextLevel should be all zeros!" 
     rows, cols, _ = np.shape(nextLevel)
     img = Image.fromarray(np.uint8(prevLevel*255))
     img = img.resize((cols, rows), resample=0, box=None)
@@ -145,7 +152,7 @@ def saveImg(canvas, pyramidType, pyramidLevel, savePath, index):
     else:
         img = Image.fromarray(np.uint8(np.clip(canvas.reconstruct(), 0.0, 1.0)*255))
     img = img.resize((300, 300), resample=0, box=None)
-    img.save(savePath+ str(index) + '.jpg')
+    img.save(savePath+ str(index) + '.png')
 
 def checkIfDirectoryExists(path):
     if not os.path.exists(path):
